@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#f97316" />
+    <meta name="description" content="DISCIPLINE AI — Ton coach personnel intelligent" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+    <title>DISCIPLINE AI</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { height: 100%; background: #080a0f; }
+      #root { height: 100%; }
+      /* Loading screen */
+      #app-loading {
+        position: fixed; inset: 0;
+        background: #080a0f;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 20px;
+        z-index: 9999; transition: opacity .4s ease;
+      }
+      #app-loading.fade { opacity: 0; pointer-events: none; }
+      .loading-logo {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 48px; letter-spacing: 6px; color: #f97316;
+        animation: pulse 1.5s infinite;
+      }
+      .loading-bar {
+        width: 200px; height: 3px;
+        background: #1f2937; border-radius: 2px; overflow: hidden;
+      }
+      .loading-bar-fill {
+        height: 100%; background: #f97316;
+        animation: load 1.5s ease forwards;
+      }
+      @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+      @keyframes load { to { width: 100%; } }
+    </style>
+  </head>
+  <body>
+    <div id="app-loading">
+      <div class="loading-logo">DISCIPLINE AI</div>
+      <div class="loading-bar"><div class="loading-bar-fill" style="width:0"></div></div>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    <script>
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          const el = document.getElementById('app-loading');
+          if (el) { el.classList.add('fade'); setTimeout(() => el.remove(), 400); }
+        }, 600);
+      });
+    </script>
+  </body>
+</html>
