@@ -4,10 +4,10 @@ const { supabase } = require('../db');
 // ─── Limites par plan ───
 const LIMITS = {
   free: {
-    tasks_per_day: 5,
-    chat_messages_per_day: 15,
-    focus_sessions_per_day: 10,
-    goals_count: 1
+    tasks_per_day: 50,           // Augmenté pour dev (était 5)
+    chat_messages_per_day: 100,  // Augmenté pour dev (était 15)
+    focus_sessions_per_day: 50,  // Augmenté pour dev (était 10)
+    goals_count: 5
   },
   premium: {
     tasks_per_day: Infinity,
