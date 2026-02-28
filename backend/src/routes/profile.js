@@ -10,7 +10,7 @@ router.get('/', verifyToken, async (req, res) => {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', req.user.id)
+      .eq('user_id', req.user.id)
       .maybeSingle();
 
     if (error) return res.status(500).json({ error: error.message });
@@ -38,7 +38,7 @@ router.put('/', verifyToken, async (req, res) => {
     const { data, error } = await supabase
       .from('profiles')
       .update(updates)
-      .eq('id', req.user.id)
+      .eq('user_id', req.user.id)
       .select()
       .maybeSingle();
 
@@ -60,25 +60,58 @@ router.post('/onboarding', verifyToken, async (req, res) => {
   }
 
   try {
-    // Créer ou mettre à jour le profil (upsert)
-    const { data: profile, error } = await supabase
+    // D'abord vérifier si le profil existe
+    const { data: existingProfile } = await supabase
       .from('profiles')
-      .upsert({
-        id: req.user.id,
-        user_id: req.user.id,
-        email: req.user.email,
-        name,
-        goals,
-        discipline_level: discipline_level || 5,
-        obstacles: obstacles || [],
-        energy_level: energy_level || 3,
-        wake_time: wake_time || '07:00',
-        available_hours: available_hours || 8,
-        onboarded: true,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'id', ignoreDuplicates: false })
-      .select()
-      .single();
+      .select('id')
+      .eq('user_id', req.user.id)
+      .maybeSingle();
+
+    let profile;
+    let error;
+
+    if (existingProfile) {
+      // UPDATE si le profil existe
+      const result = await supabase
+        .from('profiles')
+        .update({
+          name,
+          goals,
+          discipline_level: discipline_level || 5,
+          obstacles: obstacles || [],
+          energy_level: energy_level || 3,
+          wake_time: wake_time || '07:00',
+          available_hours: available_hours || 8,
+          onboarded: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', req.user.id)
+        .select()
+        .single();
+      profile = result.data;
+      error = result.error;
+    } else {
+      // INSERT si le profil n'existe pas
+      const result = await supabase
+        .from('profiles')
+        .insert({
+          user_id: req.user.id,
+          email: req.user.email,
+          name,
+          goals,
+          discipline_level: discipline_level || 5,
+          obstacles: obstacles || [],
+          energy_level: energy_level || 3,
+          wake_time: wake_time || '07:00',
+          available_hours: available_hours || 8,
+          onboarded: true,
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+      profile = result.data;
+      error = result.error;
+    }
 
     if (error) return res.status(400).json({ error: error.message });
 
@@ -128,7 +161,7 @@ router.get('/stats', verifyToken, async (req, res) => {
     const { data: profile } = await supabase
       .from('profiles')
       .select('streak, longest_streak, total_focus_minutes, total_tasks_completed')
-      .eq('id', req.user.id)
+      .eq('user_id', req.user.id)
       .maybeSingle();
 
     // Score du jour

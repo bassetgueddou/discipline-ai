@@ -47,13 +47,12 @@ router.post('/signup',
         await supabase
           .from('profiles')
           .upsert({ 
-            id: data.user.id,
             user_id: data.user.id,
             email: data.user.email,
             name,
             onboarded: false,
             updated_at: new Date().toISOString()
-          }, { onConflict: 'id', ignoreDuplicates: false });
+          }, { onConflict: 'user_id', ignoreDuplicates: false });
       }
 
       res.status(201).json({
@@ -97,7 +96,7 @@ router.post('/login',
       const { data: profile } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', data.user.id)
+        .eq('user_id', data.user.id)
         .maybeSingle();
 
       res.json({
@@ -135,7 +134,7 @@ router.get('/me', verifyToken, async (req, res) => {
     const { data: profile, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', req.user.id)
+      .eq('user_id', req.user.id)
       .maybeSingle();
 
     if (error) return res.status(500).json({ error: 'Erreur base de données.' });
