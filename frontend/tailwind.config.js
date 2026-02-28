@@ -14,6 +14,9 @@ export default {
         accent: '#f97316',
         accent2: '#fb923c',
         'accent-dim': 'rgba(249,115,22,0.15)',
+        text: '#f1f5f9',
+        text2: '#94a3b8',
+        text3: '#475569',
         brand: {
           50: '#fff7ed',
           500: '#f97316',
