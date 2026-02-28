@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAppStore } from '../../store/appStore'
 import api from '../../lib/api'
@@ -345,19 +345,14 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* Add Task Modal */}
-      <AnimatePresenceWrapper>
+      <AnimatePresence>
         {showAddModal && (
           <AddTaskModal
             onClose={() => setShowAddModal(false)}
             onAdd={(data) => addMutation.mutateAsync(data)}
-          />
-        )}
-      </AnimatePresenceWrapper>
+          />)
+        }
+      </AnimatePresence>
     </div>
   )
-}
-
-function AnimatePresenceWrapper({ children }) {
-  const { AnimatePresence } = require('framer-motion')
-  return <AnimatePresence>{children}</AnimatePresence>
 }
