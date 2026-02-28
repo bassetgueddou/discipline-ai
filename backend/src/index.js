@@ -25,15 +25,33 @@ const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:5173',
   'http://localhost:5173',
   'http://localhost:4173',
+  // Capacitor / Mobile origins (uses https://localhost)
+  'capacitor://localhost',
+  'https://localhost',
+  'http://localhost',
+  'ionic://localhost',
+  'http://10.0.2.2:5173',
+  'http://10.0.2.2:3001',
   // Ajouter ici l'URL Vercel en prod
 ];
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) {
       callback(null, true);
+      return;
+    }
+    // Allow Capacitor apps (origin starts with capacitor:// or ionic:// or https://localhost)
+    if (origin.startsWith('capacitor://') || origin.startsWith('ionic://') || origin === 'https://localhost') {
+      callback(null, origin); // Reflect the origin in CORS response
+      return;
+    }
+    if (allowedOrigins.includes(origin)) {
+      callback(null, origin); // Reflect the origin in CORS response
     } else {
-      callback(new Error(`CORS bloqué pour: ${origin}`));
+      console.log('CORS allowing unknown origin:', origin);
+      callback(null, origin); // Allow all for dev - tighten in production
     }
   },
   credentials: true
@@ -89,11 +107,11 @@ app.use((err, req, res, next) => {
 });
 
 // ─── Start ───
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`
 🔥 DISCIPLINE AI Backend
 ─────────────────────────
-✅ Serveur: http://localhost:${PORT}
+✅ Serveur: http://0.0.0.0:${PORT}
 ✅ Health:  http://localhost:${PORT}/health
 ✅ Env:     ${process.env.NODE_ENV || 'development'}
 ─────────────────────────

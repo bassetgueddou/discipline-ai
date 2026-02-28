@@ -42,12 +42,18 @@ router.post('/signup',
       }
 
       // Le trigger SQL crée automatiquement le profil
-      // Mettre à jour le nom si nécessaire
+      // Créer ou mettre à jour le profil (upsert)
       if (data.user) {
         await supabase
           .from('profiles')
-          .update({ name })
-          .eq('id', data.user.id);
+          .upsert({ 
+            id: data.user.id,
+            user_id: data.user.id,
+            email: data.user.email,
+            name,
+            onboarded: false,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'id', ignoreDuplicates: false });
       }
 
       res.status(201).json({
@@ -92,7 +98,7 @@ router.post('/login',
         .from('profiles')
         .select('*')
         .eq('id', data.user.id)
-        .single();
+        .maybeSingle();
 
       res.json({
         message: 'Connexion réussie !',
@@ -130,9 +136,10 @@ router.get('/me', verifyToken, async (req, res) => {
       .from('profiles')
       .select('*')
       .eq('id', req.user.id)
-      .single();
+      .maybeSingle();
 
-    if (error) return res.status(404).json({ error: 'Profil non trouvé.' });
+    if (error) return res.status(500).json({ error: 'Erreur base de données.' });
+    if (!profile) return res.status(404).json({ error: 'Profil non trouvé.' });
 
     res.json({
       user: {

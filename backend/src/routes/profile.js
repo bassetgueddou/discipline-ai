@@ -11,9 +11,10 @@ router.get('/', verifyToken, async (req, res) => {
       .from('profiles')
       .select('*')
       .eq('id', req.user.id)
-      .single();
+      .maybeSingle();
 
-    if (error) return res.status(404).json({ error: 'Profil non trouvé.' });
+    if (error) return res.status(500).json({ error: error.message });
+    if (!data) return res.status(404).json({ error: 'Profil non trouvé.' });
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: 'Erreur serveur.' });
@@ -39,9 +40,10 @@ router.put('/', verifyToken, async (req, res) => {
       .update(updates)
       .eq('id', req.user.id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) return res.status(400).json({ error: error.message });
+    if (!data) return res.status(404).json({ error: 'Profil non trouvé.' });
     res.json({ message: 'Profil mis à jour.', profile: data });
   } catch (err) {
     res.status(500).json({ error: 'Erreur serveur.' });
@@ -58,10 +60,13 @@ router.post('/onboarding', verifyToken, async (req, res) => {
   }
 
   try {
-    // Mettre à jour le profil
+    // Créer ou mettre à jour le profil (upsert)
     const { data: profile, error } = await supabase
       .from('profiles')
-      .update({
+      .upsert({
+        id: req.user.id,
+        user_id: req.user.id,
+        email: req.user.email,
         name,
         goals,
         discipline_level: discipline_level || 5,
@@ -69,9 +74,9 @@ router.post('/onboarding', verifyToken, async (req, res) => {
         energy_level: energy_level || 3,
         wake_time: wake_time || '07:00',
         available_hours: available_hours || 8,
-        onboarded: true
-      })
-      .eq('id', req.user.id)
+        onboarded: true,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'id', ignoreDuplicates: false })
       .select()
       .single();
 
@@ -124,7 +129,7 @@ router.get('/stats', verifyToken, async (req, res) => {
       .from('profiles')
       .select('streak, longest_streak, total_focus_minutes, total_tasks_completed')
       .eq('id', req.user.id)
-      .single();
+      .maybeSingle();
 
     // Score du jour
     const today = new Date().toISOString().split('T')[0];
@@ -133,7 +138,7 @@ router.get('/stats', verifyToken, async (req, res) => {
       .select('*')
       .eq('user_id', req.user.id)
       .eq('date', today)
-      .single();
+      .maybeSingle();
 
     res.json({
       streak: profile?.streak || 0,
