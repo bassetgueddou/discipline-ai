@@ -7,9 +7,8 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: {
     androidScheme: 'https',
-    // pour le dev, decommente la ligne suivante avec ton IP locale:
-    // url: 'http://192.168.1.xxx:5173',
-    // cleartext: true,
+    // cleartext permet les requêtes HTTP (non-HTTPS) vers le backend local
+    cleartext: true,
   },
   plugins: {
     SplashScreen: {

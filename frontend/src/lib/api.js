@@ -1,8 +1,30 @@
 import axios from 'axios'
 import { supabase } from './supabase'
 
+// detect if running in Android WebView (emulator or device)
+const getBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+  
+  // Détection Android WebView via user agent (plus fiable que Capacitor au runtime)
+  const isAndroid = typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent)
+  const isCapacitor = typeof window !== 'undefined' && !!window.Capacitor
+  
+  console.log('[API] isAndroid:', isAndroid, 'isCapacitor:', isCapacitor)
+  
+  // Avec adb reverse tcp:3001 tcp:3001, on peut utiliser localhost directement
+  // Sinon fallback sur 10.0.2.2 pour l'émulateur
+  if (isAndroid || isCapacitor) {
+    // Use localhost - requires: adb reverse tcp:3001 tcp:3001
+    console.log('[API] Using localhost with adb reverse')
+    return 'http://localhost:3001'
+  }
+  
+  console.log('[API] Using default URL:', envUrl)
+  return envUrl
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
+  baseURL: getBaseUrl(),
   timeout: 30000,
   headers: { 'Content-Type': 'application/json' }
 })
