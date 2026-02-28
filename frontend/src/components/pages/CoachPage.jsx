@@ -81,24 +81,26 @@ export default function CoachPage() {
   const { chatHistory, setChatHistory, addChatMessage, profile } = useAppStore()
 
   // Load chat history from API
-  const { isLoading } = useQuery({
+  const { data: historyData, isLoading } = useQuery({
     queryKey: ['chat-history'],
     queryFn: () => api.get('/api/coach/history'),
-    onSuccess: (data) => {
-      if (data.messages.length > 0) {
-        setChatHistory(data.messages)
-      } else if (chatHistory.length === 0) {
-        // Welcome message
-        const welcomeMsg = {
-          role: 'assistant',
-          content: `Salut ${profile?.name || 'toi'} ! 🔥 Je suis ton coach IA. J'ai analysé ton profil — on va travailler sur : **${(profile?.goals || ['tes objectifs']).join(', ')}**.\n\nNiveau discipline actuel : **${profile?.discipline_level || 5}/10** — on va pousser ça bien plus haut.\n\nQu'est-ce qui te bloque en ce moment ?`,
-          created_at: new Date().toISOString()
-        }
-        setChatHistory([welcomeMsg])
-      }
-    },
     staleTime: 60000
   })
+
+  // Handle history data when it arrives
+  useEffect(() => {
+    if (historyData?.messages?.length > 0) {
+      setChatHistory(historyData.messages)
+    } else if (historyData && chatHistory.length === 0) {
+      // Welcome message
+      const welcomeMsg = {
+        role: 'assistant',
+        content: `Salut ${profile?.name || 'toi'} ! 🔥 Je suis ton coach IA. J'ai analysé ton profil — on va travailler sur : **${(profile?.goals || ['tes objectifs']).join(', ')}**.\n\nNiveau discipline actuel : **${profile?.disciplineLevel || profile?.discipline_level || 5}/10** — on va pousser ça bien plus haut.\n\nQu'est-ce qui te bloque en ce moment ?`,
+        created_at: new Date().toISOString()
+      }
+      setChatHistory([welcomeMsg])
+    }
+  }, [historyData])
 
   // Send message mutation
   const sendMutation = useMutation({

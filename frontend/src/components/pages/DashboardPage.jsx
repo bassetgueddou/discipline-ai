@@ -155,17 +155,29 @@ export default function DashboardPage() {
   const { data: dashData, isLoading } = useQuery({
     queryKey: ['dashboard'],
     queryFn: () => api.get('/api/analytics/dashboard'),
-    onSuccess: (data) => { setTasks(data.today.tasks) },
     refetchInterval: 60000
   })
 
+  // Set tasks when dashData arrives
+  useEffect(() => {
+    if (dashData?.today?.tasks) {
+      setTasks(dashData.today.tasks)
+    }
+  }, [dashData])
+
   // Fetch daily motivation
-  useQuery({
+  const { data: motivationData } = useQuery({
     queryKey: ['motivation'],
     queryFn: () => api.get('/api/coach/daily-motivation'),
-    onSuccess: (data) => setMotivation(data.motivation),
     staleTime: 1000 * 60 * 60 // 1h
   })
+
+  // Set motivation when data arrives
+  useEffect(() => {
+    if (motivationData?.motivation) {
+      setMotivation(motivationData.motivation)
+    }
+  }, [motivationData])
 
   // Toggle task mutation
   const toggleMutation = useMutation({
@@ -205,7 +217,9 @@ export default function DashboardPage() {
 
   const today = dashData?.today || {}
   const score = today.score || 0
-  const todayTasks = tasks.length > 0 ? tasks : (today.tasks || [])
+  // ensure todayTasks is always an array to prevent .filter crash
+  const rawTasks = Array.isArray(tasks) && tasks.length > 0 ? tasks : (Array.isArray(today.tasks) ? today.tasks : [])
+  const todayTasks = rawTasks
   const completedCount = todayTasks.filter(t => t.done).length
   const stats = dashData?.user || {}
 

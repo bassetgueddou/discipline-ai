@@ -17,8 +17,8 @@ export default function ProfilePage() {
 
   const updateMutation = useMutation({
     mutationFn: (data) => api.put('/api/profile', data),
-    onSuccess: ({ profile: updated }) => {
-      updateProfile(updated)
+    onSuccess: (res) => {
+      updateProfile(res.profile || res.data || res)
       qc.invalidateQueries(['dashboard'])
       toast.success('Profil mis à jour !')
       setEditName(false)
@@ -78,7 +78,7 @@ export default function ProfilePage() {
           </div>
         ) : (
           <button onClick={() => setEditName(true)}
-            className="font-display text-3xl tracking-wide text-text hover:text-accent transition-colors mb-1 group">
+            className="block mx-auto font-display text-3xl tracking-wide text-text hover:text-accent transition-colors mb-1 group">
             {name}
             <span className="text-text3 text-base ml-2 opacity-0 group-hover:opacity-100 transition-opacity">✎</span>
           </button>
@@ -162,8 +162,8 @@ export default function ProfilePage() {
               </div>
               <input
                 type="time"
-                defaultValue={profile?.wake_time || '07:00'}
-                onChange={e => updateMutation.mutate({ wake_time: e.target.value })}
+                defaultValue={profile?.wakeTime || profile?.wake_time || '07:00'}
+                onChange={e => updateMutation.mutate({ wakeTime: e.target.value })}
                 className="bg-bg3 border border-border2 rounded-lg px-2 py-1.5 text-xs font-mono text-text outline-none focus:border-accent transition-colors"
               />
             </div>

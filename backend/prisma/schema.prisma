@@ -1,0 +1,288 @@
+// prisma schema - gamification + all the tables
+// run 'npx prisma db push' after changes
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// profile - main user data
+model Profile {
+  id        String   @id @default(uuid())
+  userId    String   @unique @map("user_id")
+  email     String?
+  name      String?
+  avatarUrl String?  @map("avatar_url")
+
+  // Onboarding
+  goals           String[]
+  obstacles       String[]
+  disciplineLevel Int      @default(5) @map("discipline_level")
+  energyLevel     Int      @default(3) @map("energy_level")
+  chronotype      String   @default("neutral") // early_bird, night_owl, neutral
+  wakeTime        String   @default("07:00") @map("wake_time")
+  sleepTime       String   @default("23:00") @map("sleep_time")
+  availableHours  Int      @default(8) @map("available_hours")
+  workStyle       String   @default("pomodoro") @map("work_style")
+
+  // Gamification
+  xp            Int      @default(0)
+  level         Int      @default(1)
+  streakDays    Int      @default(0) @map("streak_days")
+  longestStreak Int      @default(0) @map("longest_streak")
+  badges        String[]
+  lastActiveAt  DateTime @default(now()) @map("last_active_at")
+
+  // Subscription
+  plan String @default("free")
+
+  // Calendar integrations
+  googleCalendarConnected Boolean @default(false) @map("google_calendar_connected")
+  googleRefreshToken      String? @map("google_refresh_token")
+  appleCalendarConnected  Boolean @default(false) @map("apple_calendar_connected")
+
+  // Totals (denormalized for performance)
+  totalTasksCompleted Int @default(0) @map("total_tasks_completed")
+  totalFocusMinutes   Int @default(0) @map("total_focus_minutes")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tasks           Task[]
+  goals_list      Goal[]           @relation("ProfileGoals")
+  focusSessions   FocusSession[]
+  chatMessages    ChatMessage[]
+  dailyChallenges DailyChallenge[]
+  xpHistory       XpTransaction[]
+
+  @@map("profiles")
+}
+
+// goals
+model Goal {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  name        String
+  description String?
+  category    String
+
+  // Progress tracking
+  targetValue  Float?  @map("target_value")
+  currentValue Float   @default(0) @map("current_value")
+  unit         String?
+
+  // Deadline
+  deadline DateTime?
+
+  // Status
+  isActive    Boolean @default(true) @map("is_active")
+  isCompleted Boolean @default(false) @map("is_completed")
+
+  // UI
+  color String @default("#f97316")
+  icon  String @default("🎯")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  profile Profile @relation("ProfileGoals", fields: [userId], references: [userId], onDelete: Cascade)
+  tasks   Task[]
+
+  @@map("goals")
+}
+
+// tasks
+model Task {
+  id          String  @id @default(uuid())
+  userId      String  @map("user_id")
+  name        String
+  description String?
+
+  // Scheduling
+  date          String // YYYY-MM-DD
+  scheduledTime String? @map("scheduled_time") // HH:mm
+  durationMin   Int     @default(30) @map("duration_min")
+
+  // Classification
+  priority     String  @default("med") // high, med, low
+  goalId       String? @map("goal_id")
+  goalCategory String? @map("goal_category")
+  tags         String[]
+
+  // Status
+  status      String    @default("pending") // pending, in_progress, completed, skipped
+  done        Boolean   @default(false)
+  completedAt DateTime? @map("completed_at")
+
+  // AI
+  aiGenerated Boolean @default(false) @map("ai_generated")
+  aiReason    String? @map("ai_reason")
+
+  // Gamification
+  xpReward Int @default(20) @map("xp_reward")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  profile       Profile        @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  goal          Goal?          @relation(fields: [goalId], references: [id])
+  focusSessions FocusSession[]
+
+  @@index([userId, date])
+  @@map("tasks")
+}
+
+// focus sessions - pomodoro tracking
+model FocusSession {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  taskId String? @map("task_id")
+
+  // Session details
+  durationSec         Int    @map("duration_sec")
+  phase               String @default("focus") // focus, break, long-break
+  pomodorosCompleted  Int    @default(0) @map("pomodoros_completed")
+
+  // Timestamps
+  startedAt DateTime  @default(now()) @map("started_at")
+  endedAt   DateTime? @map("ended_at")
+
+  // Quality
+  interruptions Int @default(0)
+  qualityRating Int? @map("quality_rating") // 1-5
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  profile Profile @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  task    Task?   @relation(fields: [taskId], references: [id])
+
+  @@index([userId, startedAt])
+  @@map("focus_sessions")
+}
+
+// chat history
+model ChatMessage {
+  id      String @id @default(uuid())
+  userId  String @map("user_id")
+  role    String // user, assistant, system
+  content String
+
+  // Metadata
+  tokensUsed Int?    @map("tokens_used")
+  model      String?
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  profile Profile @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("chat_messages")
+}
+
+// daily challenges - keeps users coming back
+model DailyChallenge {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  date      String   // YYYY-MM-DD
+  type      String   // tasks, focus, streak, special
+  description String
+  
+  // Progress
+  target    Int
+  current   Int      @default(0)
+  xpReward  Int      @map("xp_reward")
+  
+  // Status
+  completed   Boolean   @default(false)
+  completedAt DateTime? @map("completed_at")
+  expiresAt   DateTime  @map("expires_at")
+  
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  profile Profile @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  
+  @@unique([userId, date, type])
+  @@map("daily_challenges")
+}
+
+// xp log - track where xp comes from
+model XpTransaction {
+  id      String @id @default(uuid())
+  userId  String @map("user_id")
+  amount  Int
+  reason  String
+  source  String // task, focus, challenge, streak, badge
+  
+  // Reference
+  referenceId   String? @map("reference_id")
+  referenceType String? @map("reference_type")
+  
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  profile Profile @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  
+  @@index([userId, createdAt])
+  @@map("xp_transactions")
+}
+
+// cached calendar events from google/apple
+model CalendarEvent {
+  id       String   @id @default(uuid())
+  userId   String   @map("user_id")
+  eventId  String   @map("event_id") // External calendar event ID
+  source   String   // google, apple
+  title    String
+  start    DateTime
+  end      DateTime
+  allDay   Boolean  @default(false) @map("all_day")
+  color    String?
+  
+  // Sync
+  lastSyncedAt DateTime @default(now()) @map("last_synced_at")
+  
+  @@unique([userId, eventId, source])
+  @@index([userId, start])
+  @@map("calendar_events")
+}
+
+// daily stats - graphs data
+model DailyStat {
+  id               String @id @default(uuid())
+  userId           String @map("user_id")
+  date             String // YYYY-MM-DD
+  
+  // Stats
+  tasksCompleted   Int    @default(0) @map("tasks_completed")
+  tasksTotal       Int    @default(0) @map("tasks_total")
+  completionRate   Float  @default(0) @map("completion_rate")
+  focusMinutes     Int    @default(0) @map("focus_minutes")
+  pomodoros        Int    @default(0)
+  xpEarned         Int    @default(0) @map("xp_earned")
+  disciplineScore  Int    @default(0) @map("discipline_score")
+  
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  @@unique([userId, date])
+  @@map("daily_stats")
+}

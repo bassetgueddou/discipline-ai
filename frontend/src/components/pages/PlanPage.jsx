@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAppStore } from '../../store/appStore'
@@ -65,8 +65,14 @@ export default function PlanPage() {
   const { data: tasksData, isLoading } = useQuery({
     queryKey: ['tasks', selectedDate],
     queryFn: () => api.get(`/api/tasks?date=${selectedDate}`),
-    onSuccess: (data) => { if (selectedDate === new Date().toISOString().split('T')[0]) setTasks(data.tasks) }
   })
+
+  // Set tasks when data arrives for today
+  useEffect(() => {
+    if (tasksData?.tasks && selectedDate === new Date().toISOString().split('T')[0]) {
+      setTasks(tasksData.tasks)
+    }
+  }, [tasksData, selectedDate])
 
   const planTasks = tasksData?.tasks || tasks
 
